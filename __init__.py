@@ -31,39 +31,61 @@ LOGGER = getLogger(__name__)
 class RobotControlSkill(MycroftSkill):
     def __init__(self):
         super(RobotControlSkill, self).__init__(name="RobotControlSkill")
-        rclpy.init()
+        try:
+            rclpy.init()
+        except:
+            pass
 
         self._node = rclpy.create_node('robot_control_publisher')
-        self._pub = self._node.create_publisher(String, 'topic', 10)
+        self._pub = self._node.create_publisher(String, 'mycroft/request', 10)
+        self._sub = self._node.create_subscription(
+            String, 'mycroft/speak', self.handle_speak_request, 10
+        )
+
+    def spin_ros(self, _message):
+        rclpy.spin_once(self._node, timeout_sec=0.0)
 
     def initialize(self):
-        thank_you_intent = IntentBuilder("ThankYouIntent"). \
-            require("ThankYouKeyword").build()
-        self.register_intent(thank_you_intent, self.handle_thank_you_intent)
+        how_are_you_intent = (
+            IntentBuilder("HowAreYouIntent").require("HowAreYouKeyword").build()
+        )
+        self.register_intent(how_are_you_intent, self.handle_how_are_you_intent)
 
-        how_are_you_intent = IntentBuilder("HowAreYouIntent"). \
-            require("HowAreYouKeyword").build()
-        self.register_intent(how_are_you_intent,
-                             self.handle_how_are_you_intent)
+        hello_world_intent = (
+            IntentBuilder("HelloWorldIntent")
+            .require("HelloWorldKeyword")
+            .build()
+        )
+        self.register_intent(hello_world_intent, self.handle_hello_world_intent)
 
-        hello_world_intent = IntentBuilder("HelloWorldIntent"). \
-            require("HelloWorldKeyword").build()
-        self.register_intent(hello_world_intent,
-                             self.handle_hello_world_intent)
+        look_at_me_intent = (
+            IntentBuilder("LookAtMeIntent").require("LookAtMeKeyword").build()
+        )
+        self.register_intent(look_at_me_intent, self.handle_look_at_me_intent)
 
-    def handle_thank_you_intent(self, message):
-        self.speak_dialog("welcome")
-        self._pub.publish(String("welcome"))
+        # schedule a periodical event to spin the ROS node
+        self.schedule_repeating_event(self.spin_ros, None, 0.1, name='SpinRos')
 
     def handle_how_are_you_intent(self, message):
         self.speak_dialog("how.are.you")
-        #msg = String()
-        #msg.data = "howdy"
-        self._pub.publish(String("howdy"))
+        msg = String()
+        msg.data = "howdy"
+        self._pub.publish(msg)
 
     def handle_hello_world_intent(self, message):
         self.speak_dialog("hello.world")
-        self._pub.publish(String("hello world"))
+        msg = String()
+        msg.data = "hello world"
+        self._pub.publish(msg)
+
+    def handle_look_at_me_intent(self, message):
+        self.speak_dialog('look.at.me')
+        msg = String()
+        msg.data = "look at me"
+        self._pub.publish(msg)
+
+    def handle_speak_request(self, msg):
+        self.speak(msg.data, False)
 
     def stop(self):
         self._node.destroy_node()
