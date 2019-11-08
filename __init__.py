@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with Mycroft Core.  If not, see <http://www.gnu.org/licenses/>.
 
+import json
+
 from adapt.intent import IntentBuilder
 
 from mycroft.skills.core import MycroftSkill
@@ -22,6 +24,7 @@ from mycroft.util.log import getLogger
 
 import rclpy
 from std_msgs.msg import String
+from json_msgs.srv import JsonService
 
 __author__ = 'machinekoder'
 
@@ -40,6 +43,15 @@ class RobotControlSkill(MycroftSkill):
         self._pub = self._node.create_publisher(String, 'mycroft/request', 10)
         self._sub = self._node.create_subscription(
             String, 'mycroft/speak', self.handle_speak_request, 10
+        )
+        self._order_drink = self._node.create_client(
+            JsonService, 'move_bottle/order_drink'
+        )
+        self._scan_bottles = self._node.create_client(
+            JsonService, 'move_bottle/scan_bottles'
+        )
+        self._scan_tablet = self._node.create_client(
+            JsonService, 'move_bottle/scan_tablet'
         )
 
     def spin_ros(self, _message):
@@ -63,6 +75,24 @@ class RobotControlSkill(MycroftSkill):
         )
         self.register_intent(look_at_me_intent, self.handle_look_at_me_intent)
 
+        scan_bottles_intent = (
+            IntentBuilder("ScanBottlesIntent")
+            .require("ScanBottlesKeyword")
+            .build()
+        )
+        self.register_intent(
+            scan_bottles_intent, self.handle_scan_bottles_intent
+        )
+
+        scan_tablet_intent = (
+            IntentBuilder("ScanTabletIntent")
+            .require("ScanTabletKeyword")
+            .build()
+        )
+        self.register_intent(scan_tablet_intent, self.handle_scan_tablet_intent)
+
+        self.register_intent_file('order.drink.intent', self.handle_order_drink_intent)
+
         # schedule a periodical event to spin the ROS node
         self.schedule_repeating_event(self.spin_ros, None, 0.1, name='SpinRos')
 
@@ -83,6 +113,24 @@ class RobotControlSkill(MycroftSkill):
         msg = String()
         msg.data = "look at me"
         self._pub.publish(msg)
+
+    def handle_scan_bottles_intent(self, _message):
+        self.speak_dialog('executing.request')
+        req = JsonService.Request()
+        req.data = ''
+        self._scan_bottles.call_async(req)
+
+    def handle_scan_tablet_intent(self, _message):
+        self.speak_dialog('executing.request')
+        req = JsonService.Request()
+        req.data = ''
+        self._scan_tablet.call_async(req)
+
+    def handle_order_drink_intent(self, message):
+        self.speak_dialog('executing.request')
+        req = JsonService.Request()
+        req.data = json.dumps({'name': message.data.get('drink')})
+        self._order_drink.call_async(req)
 
     def handle_speak_request(self, msg):
         self.speak(msg.data, False)
