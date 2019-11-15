@@ -24,7 +24,6 @@ from mycroft.util.log import getLogger
 
 import rclpy
 from std_msgs.msg import String
-from json_msgs.srv import JsonService
 
 __author__ = 'machinekoder'
 
@@ -44,14 +43,11 @@ class RobotControlSkill(MycroftSkill):
         self._sub = self._node.create_subscription(
             String, 'mycroft/speak', self.handle_speak_request, 10
         )
-        self._order_drink = self._node.create_client(
-            JsonService, 'move_bottle/order_drink'
+        self._order_drink_pub = self._node.create_publisher(
+            String, 'move_bottle/order_drink', 1
         )
-        self._scan_bottles = self._node.create_client(
-            JsonService, 'move_bottle/scan_bottles'
-        )
-        self._scan_tablet = self._node.create_client(
-            JsonService, 'move_bottle/scan_tablet'
+        self._scan_pub = self._node.create_publisher(
+            String, 'move_bottle/scan', 1
         )
 
     def spin_ros(self, _message):
@@ -116,21 +112,21 @@ class RobotControlSkill(MycroftSkill):
 
     def handle_scan_bottles_intent(self, _message):
         self.speak_dialog('executing.request')
-        req = JsonService.Request()
-        req.data = ''
-        self._scan_bottles.call_async(req)
+        msg = String()
+        msg.data = json.dumps({'type': 'bottles'})
+        self._scan_pub.publish(msg)
 
     def handle_scan_tablet_intent(self, _message):
         self.speak_dialog('executing.request')
-        req = JsonService.Request()
-        req.data = ''
-        self._scan_tablet.call_async(req)
+        msg = String()
+        msg.data = json.dumps({'type': 'tablet'})
+        self._scan_pub.publish(msg)
 
     def handle_order_drink_intent(self, message):
         self.speak_dialog('executing.request')
-        req = JsonService.Request()
-        req.data = json.dumps({'name': message.data.get('drink')})
-        self._order_drink.call_async(req)
+        msg = String()
+        msg.data = json.dumps({'name': message.data.get('drink')})
+        self._order_drink_pub.publish(msg)
 
     def handle_speak_request(self, msg):
         self.speak(msg.data, False)
