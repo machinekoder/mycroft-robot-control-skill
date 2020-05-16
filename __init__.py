@@ -19,8 +19,9 @@ import json
 
 from adapt.intent import IntentBuilder
 
-from mycroft.skills.core import MycroftSkill
+from mycroft.skills.core import MycroftSkill, intent_file_handler
 from mycroft.util.log import getLogger
+from mycroft.messagebus.message import Message
 
 import rclpy
 from std_msgs.msg import String, Empty
@@ -68,9 +69,7 @@ class RobotControlSkill(MycroftSkill):
         self.register_intent(how_are_you_intent, self.handle_how_are_you_intent)
 
         hello_world_intent = (
-            IntentBuilder("HelloWorldIntent")
-            .require("HelloWorldKeyword")
-            .build()
+            IntentBuilder("HelloWorldIntent").require("HelloWorldKeyword").build()
         )
         self.register_intent(hello_world_intent, self.handle_hello_world_intent)
 
@@ -80,22 +79,14 @@ class RobotControlSkill(MycroftSkill):
         self.register_intent(look_at_me_intent, self.handle_look_at_me_intent)
 
         scan_bottles_intent = (
-            IntentBuilder("ScanBottlesIntent")
-            .require("ScanBottlesKeyword")
-            .build()
+            IntentBuilder("ScanBottlesIntent").require("ScanBottlesKeyword").build()
         )
-        self.register_intent(
-            scan_bottles_intent, self.handle_scan_bottles_intent
-        )
+        self.register_intent(scan_bottles_intent, self.handle_scan_bottles_intent)
 
         scan_tablet_intent = (
-            IntentBuilder("ScanTabletIntent")
-            .require("ScanTabletKeyword")
-            .build()
+            IntentBuilder("ScanTabletIntent").require("ScanTabletKeyword").build()
         )
         self.register_intent(scan_tablet_intent, self.handle_scan_tablet_intent)
-
-        self.register_intent_file('order.drink.intent', self.handle_order_drink_intent)
 
         # schedule a periodical event to spin the ROS node
         self.schedule_repeating_event(self.spin_ros, None, 0.1, name='SpinRos')
@@ -130,6 +121,7 @@ class RobotControlSkill(MycroftSkill):
         msg.data = json.dumps({'service': 'scan_target_area'})
         self._service_pub.publish(msg)
 
+    @intent_file_handler("order.drink.intent")
     def handle_order_drink_intent(self, message):
         self.speak_dialog('executing.request')
         msg = String()
