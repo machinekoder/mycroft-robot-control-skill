@@ -23,7 +23,7 @@ from mycroft.skills.core import MycroftSkill
 from mycroft.util.log import getLogger
 
 import rclpy
-from std_msgs.msg import String
+from std_msgs.msg import String, Empty
 
 __author__ = 'machinekoder'
 
@@ -40,9 +40,17 @@ class RobotControlSkill(MycroftSkill):
 
         self._node = rclpy.create_node('robot_control_publisher')
         self._pub = self._node.create_publisher(String, 'mycroft/request', 10)
-        self._sub = self._node.create_subscription(
-            String, 'mycroft/speak', self.handle_speak_request, 10
-        )
+        self._subs = [
+            self._node.create_subscription(
+                String, 'mycroft/speak', self.handle_speak_request, 10
+            ),
+            self._node.create_subscription(
+                Empty, 'mycroft/listen', self.handle_listen_request, 1
+            ),
+            self._node.create_subscription(
+                Empty, 'mycroft/stop', self.handle_stop_request, 1
+            ),
+        ]
         self._order_drink_pub = self._node.create_publisher(
             String, 'move_bottle/order_drink', 1
         )
@@ -130,6 +138,12 @@ class RobotControlSkill(MycroftSkill):
 
     def handle_speak_request(self, msg):
         self.speak(msg.data, False)
+
+    def handle_listen_request(self, _):
+        self.bus.emit(Message("mycroft.mic.listen"))
+
+    def handle_stop_request(self, _):
+        self.bus.emit(Message("mycroft.stop"))
 
     def stop(self):
         self._node.destroy_node()
