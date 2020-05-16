@@ -54,8 +54,8 @@ class RobotControlSkill(MycroftSkill):
         self._order_drink_pub = self._node.create_publisher(
             String, 'move_bottle/order_drink', 1
         )
-        self._scan_pub = self._node.create_publisher(
-            String, 'move_bottle/scan', 1
+        self._service_pub = self._node.create_publisher(
+            String, 'move_bottle/service', 1
         )
 
     def spin_ros(self, _message):
@@ -121,19 +121,21 @@ class RobotControlSkill(MycroftSkill):
     def handle_scan_bottles_intent(self, _message):
         self.speak_dialog('executing.request')
         msg = String()
-        msg.data = json.dumps({'type': 'bottles'})
-        self._scan_pub.publish(msg)
+        msg.data = json.dumps({'service': 'scan_bottles'})
+        self._service_pub.publish(msg)
 
     def handle_scan_tablet_intent(self, _message):
         self.speak_dialog('executing.request')
         msg = String()
-        msg.data = json.dumps({'type': 'tablet'})
-        self._scan_pub.publish(msg)
+        msg.data = json.dumps({'service': 'scan_target_area'})
+        self._service_pub.publish(msg)
 
     def handle_order_drink_intent(self, message):
         self.speak_dialog('executing.request')
         msg = String()
-        msg.data = json.dumps({'name': message.data.get('drink')})
+        msg.data = json.dumps(
+            {'name': message.data.get('drink'), 'glasses': ['glass 1']}
+        )
         self._order_drink_pub.publish(msg)
 
     def handle_speak_request(self, msg):
